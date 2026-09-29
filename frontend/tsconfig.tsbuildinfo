@@ -1,0 +1,1 @@
+{"root":["./src/api.ts","./src/main.tsx","./src/charts/bars.tsx","./src/charts/calibrationchart.tsx","./src/charts/linechart.tsx","./src/charts/usewidth.ts","./src/components/common.tsx","./src/pages/dashboard.tsx","./src/pages/matchuppage.tsx","./src/pages/scoutingpage.tsx","./src/pages/teampage.tsx"],"version":"5.9.3"}

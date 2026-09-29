@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scoutagent-postgres
+    environment:
+      POSTGRES_DB: scoutagent
+      POSTGRES_USER: scout
+      POSTGRES_PASSWORD: scout
+    ports:
+      - "5433:5432"
+    command: >
+      postgres -c max_connections=200 -c shared_buffers=256MB -c effective_cache_size=768MB
+               -c work_mem=8MB -c random_page_cost=1.1
+    volumes:
+      - scoutagent-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scout -d scoutagent"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  scoutagent-pgdata:

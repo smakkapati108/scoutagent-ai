@@ -1,0 +1,60 @@
+server:
+  port: 8080
+  tomcat:
+    threads:
+      max: 400
+    accept-count: 1000
+    max-connections: 10000
+
+spring:
+  application:
+    name: scoutagent
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/scoutagent?reWriteBatchedInserts=true}
+    username: ${DB_USER:scout}
+    password: ${DB_PASSWORD:scout}
+    hikari:
+      pool-name: scout-pool
+      maximum-pool-size: ${DB_POOL_SIZE:32}
+      minimum-idle: 8
+      connection-timeout: 3000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      data-source-properties:
+        prepareThreshold: 3
+        preparedStatementCacheQueries: 512
+        preparedStatementCacheSizeMiB: 16
+  flyway:
+    enabled: true
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=5000,expireAfterWrite=10m
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info
+
+scout:
+  seed:
+    # Generate a synthetic league on first startup when the database is empty.
+    enabled: true
+    first-season: 2016
+    last-season: 2025
+    random-seed: 42
+  model:
+    # Seasons after this one are held out as out-of-sample test games.
+    last-train-season: 2022
+  agents:
+    model: ${SCOUT_AGENT_MODEL:claude-opus-5}
+    max-tokens: 16000
+    max-turns: 12
+    analyst-effort: medium
+    planner-effort: high
+    # Server-side refusal fallbacks (beta). Set to false if your account rejects the beta.
+    refusal-fallbacks: true
