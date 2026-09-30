@@ -57,6 +57,34 @@ Current results on the seeded league (3,690 held-out games):
 
 That is a relative lift of about 15% over the home-team baseline, and the model is well calibrated (see the dashboard's calibration chart). Expect figures in this range: real NBA models typically reach 65–70%, because single games are noisy.
 
+## ML research pipeline (Python)
+
+`ml/` is an offline research companion to the Java model, built with pandas and scikit-learn:
+
+- **Feature port:** `scoutml/features.py` rebuilds the same leakage-free pre-game features from PostgreSQL into a pandas DataFrame.
+- **Walk-forward cross-validation:** expanding-window, time-ordered folds. The model trains on every season before season S, tests on S, and repeats for 2019–2025.
+- **Model comparison:** logistic regression vs. gradient boosting (`HistGradientBoostingClassifier`) vs. Elo, record and home-team baselines, scored on accuracy, log loss, Brier score and expected calibration error.
+- **Parity check:** refits the backend's exact setup in scikit-learn and compares it with the live Java model's metrics.
+
+```bash
+cd ml && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python run_experiments.py      # needs Postgres; backend optional (for the parity check)
+.venv/bin/python -m pytest tests
+```
+
+Results (7 folds, 8,610 out-of-fold predictions; full report in [ml/results/report.md](ml/results/report.md)):
+
+| Model | Accuracy | Log loss | Brier | ECE |
+|---|---|---|---|---|
+| **Logistic regression** | **65.9% ± 1.2** | **0.616** | **0.214** | **0.012** |
+| Gradient boosting | 65.1% ± 1.2 | 0.626 | 0.218 | 0.020 |
+| Elo only | 64.8% ± 0.9 | – | – | – |
+| Always home team | 58.1% ± 1.2 | – | – | – |
+
+Logistic regression beat gradient boosting on every probabilistic metric. With ~10k noisy games and features that are already informative ratings, the extra flexibility of trees mostly fits noise. The scikit-learn refit matches the Java model: identical log loss (0.6094) and Brier score (0.2113), with coefficients within 0.0002.
+
+![Walk-forward results](ml/results/walk_forward.png)
+
 ## Agents
 
 Each agent runs a manual Claude tool-use loop (`AgentRunner`) with the official Anthropic Java SDK:
@@ -111,9 +139,11 @@ Result: about **4,000 requests/s**, 0 errors, p50 14 ms, p95 41 ms, p99 57 ms. R
 ## Tests
 
 ```bash
-cd backend && mvn test     # needs `docker compose up -d`
+cd backend && mvn test                         # needs `docker compose up -d`
+cd ml && .venv/bin/python -m pytest tests      # no database needed
 ```
 
 - Generator invariants: 82 games per team, no double-booking, consistent box scores, realistic rest.
 - The regression recovers known coefficients.
 - An integration test calls every agent tool exactly as Claude would (JSON in, JSON out) against the seeded database.
+- Python: a game's result never changes its own features (no leakage), and walk-forward folds never train on future seasons.
